@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Calculadora de Refino - Albion Online (Vertical)</title>
+<style>
+  :root {
+    --bg: #1b2330;
+    --panel: #243044;
+    --line: #34435c;
+    --text: #e8e2d0;
+    --mute: #9aa6b8;
+    --brass: #c9a45c;
+    --good: #7fb58a;
+    --bad: #d9826f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 10px;
+    padding-bottom: 90px;
+    font-variant-numeric: tabular-nums;
+  }
+  main { max-width: 600px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin: 0 0 2px; color: var(--brass); text-align: center; }
+  .eyebrow { color: var(--mute); font-size: 0.7rem; text-align: center; margin-bottom: 2px; text-transform: uppercase; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  label { display: block; font-size: 0.8rem; color: var(--mute); margin-bottom: 3px; font-weight: 500; }
+  input, select {
+    width: 100%;
+    height: 40px;
+    padding: 6px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--brass); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+  .chips-container { margin-top: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+  .chip {
+    flex: 1;
+    min-width: 40px;
+    height: 36px;
+    padding: 0 4px;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--mute);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .chip[aria-pressed="true"] {
+    border-color: var(--tone);
+    color: #fff;
+    background: color-mix(in srgb, var(--tone) 35%, var(--bg));
+  }
+  .chip:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  button { border: 0; border-radius: 6px; font-weight: bold; cursor: pointer; }
+  
+  .vertical-list { display: flex; flex-direction: column; gap: 10px; }
+  .item-card {
+    background: color-mix(in srgb, var(--bg) 60%, var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+  }
+  .item-title { font-weight: bold; color: var(--brass); font-size: 0.95rem; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .item-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 6px; gap: 6px; }
+  .item-row input { width: 110px; height: 34px; text-align: right; font-size: 0.85rem; }
+  .item-total { font-weight: bold; text-align: right; font-size: 0.95rem; margin-top: 4px; border-top: 1px dashed var(--line); padding-top: 4px; }
+
+  .cmp-container { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .cmp-card {
+    background: color-mix(in srgb, var(--bg) 70%, var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .cmp-card:hover { border-color: var(--brass); }
+  .cmp-card.best {
+    background: color-mix(in srgb, var(--good) 15%, var(--panel));
+    border-left: 4px solid var(--good);
+    border-color: var(--good);
+  }
+  .cmp-card.shown { outline: 1px solid var(--brass); }
+  .cmp-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9rem; color: var(--brass); margin-bottom: 4px; }
+  .cmp-body { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--mute); }
+  .cmp-cost { font-weight: bold; color: #fff; }
+
+  .res { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 10px; }
+  @media(min-width: 400px) { .res { grid-template-columns: repeat(3, 1fr); } }
+  .box { border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 80%, var(--bg)); border-radius: 6px; padding: 8px; text-align: center; }
+  .box span { display: block; color: var(--mute); font-size: 0.75rem; margin-bottom: 2px; }
+  .box b { font-size: 1.15rem; }
+  
+  .pos { color: var(--good); } .neg { color: var(--bad); }
+  .msg { color: var(--bad); font-size: 0.8rem; margin: 0 0 8px; text-align: center; }
+  .hint { color: var(--mute); font-size: 0.75rem; line-height: 1.3; margin: 4px 0; }
+
+  .pct-badge {
+    background: color-mix(in srgb, var(--good) 20%, var(--bg));
+    border: 1px solid var(--good);
+    color: var(--good);
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-weight: normal;
+  }
+  .tag-best {
+    background: var(--good);
+    color: #1b2330;
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .floatbtn {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    height: 46px;
+    background: var(--brass);
+    color: #1b2330;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 23px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .floatbtn:disabled { opacity: 0.5; }
+  footer { color: var(--mute); font-size: 0.7rem; text-align: center; margin-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Albion Online · Versão Vertical</div>
+  <h1>Calculadora de Refino</h1>
+  <p class="hint" id="sub" style="text-align:center; margin-bottom: 10px;"></p>
+
+  <section class="panel">
+    <div class="grid-2">
+      <div>
+        <label for="resCat">Material</label>
+        <select id="resCat"></select>
+      </div>
+      <div>
+        <label for="count">Qtd a Produzir</label>
+        <input id="count" type="number" min="1" value="100">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label for="buyCity">Cidade da Compra</label>
+        <select id="buyCity"></select>
+      </div>
+      <div>
+        <label for="refCity">Cidade do Refino</label>
+        <select id="refCity"></select>
+      </div>
+    </div>
+    <div style="margin-bottom: 8px;">
+      <label for="sellCity">Destino / Venda</label>
+      <select id="sellCity"></select>
+    </div>
+
+    <div class="chips-container">
+      <label>Tier</label>
+      <div class="chips" id="tiers" role="group"></div>
+    </div>
+    
+    <div class="chips-container">
+      <label>Encantamento</label>
+      <div class="chips" id="enchs" role="group"></div>
+    </div>
+
+    <div class="chips-container">
+      <label>Bônus Diário de Refino</label>
+      <div class="chips" id="dRefBonusGroup" role="group">
+        <button type="button" class="chip" data-v="0" style="--tone:#9aa6b8" aria-pressed="true">Nenhum (0%)</button>
+        <button type="button" class="chip" data-v="10" style="--tone:#c9a45c" aria-pressed="false">+10%</button>
+        <button type="button" class="chip" data-v="20" style="--tone:#7fb58a" aria-pressed="false">+20%</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 8px;">
+      <label>Conta</label>
+      <button type="button" class="chip" id="premium" style="--tone:#c9a45c; width: 100%; height: 40px;" aria-pressed="false">Premium</button>
+    </div>
+  </section>
+
+  <p class="msg" id="msg" role="alert"></p>
+
+  <section class="panel" id="cmpPanel" style="display:none;">
+    <h2>Onde Comprar os Materiais?</h2>
+    <p class="hint" style="margin:0 0 8px;">Compare o custo total comprando na <b>Cidade de Compra</b> vs comprando direto na <b>Cidade de Refino</b>:</p>
+    <div class="cmp-container" id="cmpList"></div>
+  </section>
+
+  <section class="panel">
+    <div class="grid-2">
+      <div>
+        <label for="mode">Preço Compra</label>
+        <select id="mode">
+          <option value="b">Pedido Venda</option>
+          <option value="o">Pedido Compra</option>
+        </select>
+      </div>
+      <div>
+        <label for="rateR">Estação / 100 Nutrição</label>
+        <input id="rateR" type="number" min="0" value="400">
+      </div>
+    </div>
+
+    <p class="hint" id="rrrInfo"></p>
+
+    <div class="vertical-list" id="verticalDetail"></div>
+
+    <div class="summary-box">
+      <div class="summary-row"><span>Taxa da Estação:</span> <b id="tRefVal">0</b></div>
+      <div class="summary-row total"><span>Custo Total de Refino:</span> <span id="cost">0</span></div>
+    </div>
+  </section>
+
+  <section class="panel" id="salePanel">
+    <div class="item-card" id="saleCard" style="margin-bottom: 8px;">
+      <div class="item-title"><span id="saleTitle">Preço de Venda do Refinado</span></div>
+      <div class="item-row" id="salePriceRow">
+        <span>Preço unitário:</span>
+        <input id="pItem" type="number" min="0" placeholder="0">
+      </div>
+      <i class="age" id="aItem" style="text-align:right; display:block;"></i>
+      <div class="summary-row" style="margin-top: 6px;"><span>Total Bruto:</span> <b id="gross">0</b></div>
+    </div>
+
+    <div class="summary-box" id="taxSummaryBox" style="margin-top:0;">
+      <div class="summary-row"><span>Taxa de Mercado (<span id="taxPct">10.5%</span>):</span> <b id="taxVal">0</b></div>
+      <div class="summary-row total"><span>Receita Líquida:</span> <span id="net">0</span></div>
+    </div>
+
+    <div class="res">
+      <div class="box"><span id="profitLabel">Lucro Total</span><b id="profit">0</b></div>
+      <div class="box"><span id="perItemLabel">Lucro / Unid</span><b id="perItem">0</b></div>
+      <div class="box" id="roiBox"><span>ROI</span><b id="roi">0%</b></div>
+    </div>
+  </section>
+
+  <footer>Refino Vertical · Otimizado para Telemóvel</footer>
+</main>
+
+<button id="fetch" class="floatbtn" type="button">Buscar Preços da API</button>
+
+<script>
+const $ = id => document.getElementById(id);
+const CITIES = ["Caerleon","Bridgewatch","Fort Sterling","Lymhurst","Martlock","Thetford","Brecilien"];
+const SERVER = "west";
+const FIBERS_PER_REF = { 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 5, 8: 5 };
+const TIERS = [[2,"#9aa6b8"],[3,"#9aa6b8"],[4,"#5b8fd9"],[5,"#d9645b"],[6,"#d9904a"],[7,"#d9c24a"],[8,"#9a6bd9"]];
+const ENCHS = [[0,"#9aa6b8"],[1,"#7fb58a"],[2,"#5b8fd9"],[3,"#9a6bd9"],[4,"#d96fa8"]];
+const NUTRITION = 0.1125;
+
+const REFINING_TYPES = {
+  CLOTH:    { raw: "FIBER", ref: "CLOTH",    rawNome: "Fibra",   refNome: "Tecido",   cityBonus: "Lymhurst" },
+  LEATHER:  { raw: "HIDE",  ref: "LEATHER",  rawNome: "Pele",    refNome: "Couro",    cityBonus: "Martlock" },
+  METALBAR: { raw: "ORE",   ref: "METALBAR", rawNome: "Minério", refNome: "Barra Metal", cityBonus: "Thetford" },
+  PLANKS:   { raw: "WOOD",  ref: "PLANKS",   rawNome: "Tronco",  refNome: "Tábua",    cityBonus: "Fort Sterling" }
+};
+
+let tier = 4, ench = 0, selectedBuyOption = 0, dailyBonusVal = 0;
+let P_buy = {};
+let P_ref = {};
+
+const rrr = pb => Math.floor((1 - 1 / (1 + pb)) * 1000) / 1000;
+const pct1 = x => (x * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%";
+const money = n => Math.round(n).toLocaleString("pt-BR");
+const num = id => parseFloat($(id).value) || 0;
+
+["buyCity", "refCity"].forEach(id => {
+  $(id).innerHTML = CITIES.map(c => `<option>${c}</option>`).join("");
+});
+
+const sellCityOpts = ["Uso Próprio ( Craft / Sem Venda )", "Black Market", ...CITIES];
+$("sellCity").innerHTML = sellCityOpts.map(c => `<option>${c}</option>`).join("");
+
+$("buyCity").value = "Caerleon";
+$("refCity").value = "Martlock";
+$("sellCity").value = "Uso Próprio ( Craft / Sem Venda )";
+
+$("resCat").innerHTML = Object.entries(REFINING_TYPES).map(([k, v]) => `<option value="${k}">${v.refNome}</option>`).join("");
+
+function buildChips(el, list, fmt, kind){
+  el.innerHTML = list.map(([v, tone]) => `<button type="button" class="chip" data-v="${v}" style="--tone:${tone}">${fmt(v)}</button>`).join("");
+  el.addEventListener("click", e => {
+    const b = e.target.closest(".chip");
+    if(!b || b.disabled) return;
+    if(kind === "tier") tier = Number(b.dataset.v); else ench = Number(b.dataset.v);
+    onVariant();
+  });
+}
+buildChips($("tiers"), TIERS, v => "T" + v, "tier");
+buildChips($("enchs"), ENCHS, v => "." + v, "ench");
+
+$("dRefBonusGroup").addEventListener("click", e => {
+  const b = e.target.closest(".chip");
+  if(!b) return;
+  dailyBonusVal = Number(b.dataset.v);
+  $("dRefBonusGroup").querySelectorAll(".chip").forEach(ch => ch.setAttribute("aria-pressed", Number(ch.dataset.v) === dailyBonusVal));
+  renderDetail();
+});
+
+function syncChips(){
+  $("tiers").querySelectorAll(".chip").forEach(b => b.setAttribute("aria-pressed", Number(b.dataset.v) === tier));
+  $("enchs").querySelectorAll(".chip").forEach(b => {
+    b.setAttribute("aria-pressed", Number(b.dataset.v) === ench);
+    b.disabled = (tier < 4 && Number(b.dataset.v) > 0);
+  });
+  if(tier < 4 && ench > 0) ench = 0;
+}
+
+const taxPct = () => $("premium").getAttribute("aria-pressed") === "true" ? 6.5 : 10.5;
+const valueMult = (t, k) => 16 * Math.pow(2, t - 4 + k);
+const refUnitFee = (t, k) => t < 3 ? 0 : valueMult(t, k) * NUTRITION * num("rateR") / 100;
+
+function getRecipeLines(){
+  const catKey = $("resCat").value;
+  const res = REFINING_TYPES[catKey];
+  const n = num("count");
+  const k = ench;
+  const t = tier;
+
+  const refCityNow = $("refCity").value;
+  const hasCityBonus = (res.cityBonus === refCityNow);
+  const dailyBonus = dailyBonusVal / 100;
+  const totalBonus = 0.18 + (hasCityBonus ? 0.40 : 0) + dailyBonus;
+  const returnRate = rrr(totalBonus);
+  const feePerUnit = refUnitFee(t, k);
+
+  const lv = k ? `_LEVEL${k}@${k}` : "";
+  const tag = k ? "." + k : "";
+  const returnPctFormatted = pct1(returnRate);
+
+  const lines = [];
+
+  if(t >= 3){
+    const rawReqGross = n * FIBERS_PER_REF[t];
+    const rawReqEfective = Math.ceil(rawReqGross * (1 - returnRate));
+    const lk = (k && t - 1 >= 4) ? k : 0;
+    const lowerRefGross = n;
+    const lowerRefEfective = Math.ceil(lowerRefGross * (1 - returnRate));
+
+    lines.push(
+      { label: `${res.rawNome} T${t}${tag}`, badge: `Retorno: ${returnPctFormatted}`, id: `T${t}_${res.raw}${lv}`, qty: rawReqEfective, gross: rawReqGross },
+      { label: `${res.refNome} T${t - 1}${lk ? "." + lk : ""}`, badge: `Retorno: ${returnPctFormatted}`, id: `T${t - 1}_${res.ref}${lk ? `_LEVEL${lk}@${lk}` : ""}`, qty: lowerRefEfective, gross: lowerRefGross }
+    );
+  } else {
+    const rawReqGross = n * FIBERS_PER_REF[t];
+    const rawReqEfective = Math.ceil(rawReqGross * (1 - returnRate));
+    lines.push(
+      { label: `${res.rawNome} T${t}${tag}`, badge: `Retorno: ${returnPctFormatted}`, id: `T${t}_${res.raw}${lv}`, qty: rawReqEfective, gross: rawReqGross }
+    );
+  }
+
+  const outputId = `T${t}_${res.ref}${lv}`;
+  return { res, returnRate, hasCityBonus, dailyBonus, lines, outputId, feePerUnit };
+}
+
+function renderDetail(){
+  const recipe = getRecipeData();
+  const mode = $("mode").value;
+  const buyCityName = $("buyCity").value;
+  const refCityName = $("refCity").value;
+
+  $("cmpPanel").style.display = "block";
+  
+  const options = [
+    { id: 0, name: `Comprar na Cidade da Compra (${buyCityName})`, citySrc: 'buy' },
+    { id: 1, name: `Comprar na Cidade do Refino (${refCityName})`, citySrc: 'ref' }
+  ];
+
+  let bestOptId = 0;
+  let minCost = Infinity;
+
+  const evaluatedOpts = options.map(opt => {
+    let c = 0;
+    recipe.lines.forEach(l => {
+      const priceDict = (opt.citySrc === 'buy') ? P_buy : P_ref;
+      const p = (priceDict[l.id] && priceDict[l.id][mode]) || 0;
+      c += l.qty * p;
+    });
+    c += num("count") * recipe.feePerUnit;
+    if(c < minCost){ minCost = c; bestOptId = opt.id; }
+    return { ...opt, totalCost: c };
+  });
+
+  $("cmpList").innerHTML = evaluatedOpts.map(opt => {
+    const isBest = (opt.id === bestOptId);
+    const isShown = (opt.id === selectedBuyOption);
+    return `<div class="cmp-card ${isBest ? 'best' : ''} ${isShown ? 'shown' : ''}" onclick="selectBuyOption(${opt.id})">
+      <div class="cmp-header">
+        <span>${opt.name}</span>
+        ${isBest ? '<span class="tag-best">Mais Barato</span>' : ''}
+      </div>
+      <div class="cmp-body">
+        <span>Custo Total:</span>
+        <span class="cmp-cost">${money(opt.totalCost)}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  const activePriceDict = (selectedBuyOption === 0) ? P_buy : P_ref;
+
+  $("verticalDetail").innerHTML = recipe.lines.map((l, i) => {
+    const p = activePriceDict[l.id] || { b: 0, o: 0, ab: "s/ dados", ao: "s/ dados" };
+    const unitPrice = p[mode] || 0;
+    const totalLine = l.qty * unitPrice;
+    const ageText = mode === 'b' ? p.ab : p.ao;
+    
+    return `<div class="item-card">
+      <div class="item-title">
+        <span>${l.label}</span> 
+        <span class="pct-badge">${l.badge}</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--mute); margin-bottom:4px; display:flex; justify-content:space-between;">
+        <span>Qtd necessária: <b>${money(l.qty)}</b></span>
+        <span>Bruto: ${money(l.gross)}</span>
+      </div>
+      <div class="item-row">
+        <span>Preço Unitário (${mode === 'b' ? 'Venda' : 'Compra'}):</span>
+        <input type="number" min="0" data-id="${l.id}" data-f="${mode}" value="${unitPrice || ''}" placeholder="0">
+      </div>
+      <div style="text-align:right;"><i class="age">${ageText}</i></div>
+      <div class="item-total">Total: <span id="td${i}">${money(totalLine)}</span></div>
+    </div>`;
+  }).join("");
+  update();
+}
+
+function getRecipeData(){
+  return getRecipeLines();
+}
+
+window.selectBuyOption = function(id){
+  selectedBuyOption = id;
+  renderDetail();
+};
+
+function update(){
+  const recipe = getRecipeData();
+  const mode = $("mode").value;
+  const n = num("count");
+  const activePriceDict = (selectedBuyOption === 0) ? P_buy : P_ref;
+
+  let cost = 0;
+  recipe.lines.forEach((l, i) => {
+    const p = (activePriceDict[l.id] && activePriceDict[l.id][mode]) || 0;
+    const totalLine = l.qty * p;
+    cost += totalLine;
+    const el = $("td" + i);
+    if(el) el.textContent = money(totalLine);
+  });
+
+  const totalFee = n * recipe.feePerUnit;
+  cost += totalFee;
+
+  $("tRefVal").textContent = money(totalFee);
+  $("cost").textContent = money(cost);
+
+  const isOwnUse = $("sellCity").value.startsWith("Uso Próprio");
+
+  if(isOwnUse){
+    $("saleTitle").textContent = "Uso Próprio (Custo de Fabricação)";
+    $("salePriceRow").style.display = "none";
+    $("aItem").style.display = "none";
+    $("taxSummaryBox").style.display = "none";
+
+    $("gross").textContent = money(cost);
+    $("profitLabel").textContent = "Custo Total";
+    $("profit").textContent = money(cost); $("profit").className = "";
+    $("perItemLabel").textContent = "Custo / Unid";
+    $("perItem").textContent = money(n ? cost / n : 0); $("perItem").className = "";
+    $("roiBox").style.display = "none";
+  } else {
+    $("saleTitle").textContent = "Preço de Venda do Refinado";
+    $("salePriceRow").style.display = "flex";
+    $("aItem").style.display = "block";
+    $("taxSummaryBox").style.display = "block";
+    $("roiBox").style.display = "block";
+
+    const sellPrice = num("pItem");
+    const grossSale = n * sellPrice;
+    const taxValue = grossSale * taxPct() / 100;
+    const netSale = grossSale - taxValue;
+    const profit = netSale - cost;
+
+    $("gross").textContent = money(grossSale);
+    $("taxPct").textContent = taxPct().toLocaleString("pt-BR") + "%";
+    $("taxVal").textContent = money(taxValue);
+    $("net").textContent = money(netSale);
+
+    const cls = profit >= 0 ? "pos" : "neg";
+    const roi = cost ? (profit / cost * 100) : 0;
+
+    $("profitLabel").textContent = "Lucro Total";
+    $("profit").textContent = money(profit); $("profit").className = cls;
+    $("perItemLabel").textContent = "Lucro / Unid";
+    $("perItem").textContent = money(n ? profit / n : 0); $("perItem").className = cls;
+    $("roi").textContent = roi.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "%"; $("roi").className = cls;
+  }
+
+  const buySourceName = selectedBuyOption === 0 ? $("buyCity").value : $("refCity").value;
+  $("rrrInfo").textContent = `Compra em: ${buySourceName} | Refino em: ${$("refCity").value} (${pct1(recipe.returnRate)}) | Destino: ${$("sellCity").value}.`;
+}
+
+function onVariant(){
+  syncChips();
+  const recipe = getRecipeData();
+  $("sub").textContent = `Refino de ${recipe.res.refNome} T${tier}.${ench}`;
+  P_buy = {};
+  P_ref = {};
+  selectedBuyOption = 0;
+  $("pItem").value = ""; $("aItem").textContent = ""; $("msg").textContent = "";
+  renderDetail();
+}
+
+async function getJSON(url, ms = 20000){
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
+  try{
+    const res = await fetch(url, { signal: ctl.signal });
+    if(!res.ok) throw new Error("Erro API " + res.status);
+    return await res.json();
+  } finally { clearTimeout(timer); }
+}
+
+async function buscar(){
+  $("msg").textContent = "";
+  const buyCityName = $("buyCity").value;
+  const refCityName = $("refCity").value;
+  const sellDest = $("sellCity").value;
+  const sellCityName = sellDest.startsWith("Uso Próprio") ? refCityName : sellDest;
+
+  const recipe = getRecipeData();
+  const allIds = [...recipe.lines.map(l => l.id), recipe.outputId];
+  const uniqueCities = [...new Set([buyCityName, refCityName, sellCityName])];
+
+  const base = `https://${SERVER}.albion-online-data.com/api/v2/stats`;
+  const loc = c => c.map(encodeURIComponent).join(",");
+  const priceUrl = `${base}/prices/${allIds.join(",")}.json?locations=${loc(uniqueCities)}&qualities=1`;
+
+  $("fetch").disabled = true; $("fetch").textContent = "Buscando…";
+  try{
+    const apiData = await getJSON(priceUrl);
+    if(!Array.isArray(apiData) || !apiData.length) throw new Error("Sem dados.");
+    const find = (id, city) => apiData.find(x => x.item_id === id && String(x.city).toLowerCase() === city.toLowerCase());
+
+    allIds.forEach(id => {
+      const xb = find(id, buyCityName);
+      P_buy[id] = {
+        b: xb && xb.sell_price_min > 0 ? xb.sell_price_min : 0, ab: xb && xb.sell_price_min > 0 ? ago(xb.sell_price_min_date) : "s/ dados",
+        o: xb && xb.buy_price_max > 0 ? xb.buy_price_max : 0,   ao: xb && xb.buy_price_max > 0 ? ago(xb.buy_price_max_date) : "s/ dados"
+      };
+
+      const xr = find(id, refCityName);
+      P_ref[id] = {
+        b: xr && xr.sell_price_min > 0 ? xr.sell_price_min : 0, ab: xr && xr.sell_price_min > 0 ? ago(xr.sell_price_min_date) : "s/ dados",
+        o: xr && xr.buy_price_max > 0 ? xr.buy_price_max : 0,   ao: xr && xr.buy_price_max > 0 ? ago(xr.buy_price_max_date) : "s/ dados"
+      };
+    });
+
+    if(!sellDest.startsWith("Uso Próprio")){
+      const xo = find(recipe.outputId, sellCityName);
+      if(xo && xo.sell_price_min > 0){
+        $("pItem").value = xo.sell_price_min;
+        $("aItem").textContent = ago(xo.sell_price_min_date);
+      } else {
+        $("aItem").textContent = "s/ dados";
+      }
+    }
+  } catch(e){
+    $("msg").textContent = "Erro: " + e.message;
+  } finally {
+    $("fetch").textContent = "Buscar Preços da API"; $("fetch").disabled = false;
+  }
+  renderDetail();
+}
+
+function ago(iso){
+  if(!iso || iso.startsWith("0001")) return "";
+  const min = Math.round((Date.now() - new Date(iso + "Z")) / 60000);
+  return min < 60 ? `${min}m` : min < 1440 ? `${Math.round(min/60)}h` : `${Math.round(min/1440)}d`;
+}
+
+$("verticalDetail").addEventListener("input", e => {
+  const i = e.target.dataset;
+  if(!i.id) return;
+  const activeDict = (selectedBuyOption === 0) ? P_buy : P_ref;
+  activeDict[i.id] = activeDict[i.id] || { b: 0, o: 0, ab: "", ao: "" };
+  activeDict[i.id][i.f] = parseFloat(e.target.value) || 0;
+  update();
+});
+
+["resCat","buyCity","refCity","sellCity","mode"].forEach(id => $(id).addEventListener("input", onVariant));
+["pItem","rateR","count"].forEach(id => $(id).addEventListener("input", update));
+$("premium").addEventListener("click", () => {
+  const curr = $("premium").getAttribute("aria-pressed") === "true";
+  $("premium").setAttribute("aria-pressed", String(!curr));
+  update();
+});
+$("fetch").addEventListener("click", buscar);
+
+onVariant();
+</script>
+</body>
+</html>
